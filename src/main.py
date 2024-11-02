@@ -21,8 +21,8 @@ def fetch_data() -> [any, any]:
     df_train (pd.DataFrame): The raw training data DataFrame.
     df_test (pd.DataFrame): The raw test data DataFrame.
     """
-    df_train = pd.read_csv('./data/train.csv')
-    df_test = pd.read_csv('./data/test.csv')
+    df_train = pd.read_csv('../data/Train.csv')
+    df_test = pd.read_csv('../data/Test.csv')
 
     return df_train, df_test
 
