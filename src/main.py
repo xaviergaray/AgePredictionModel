@@ -6,25 +6,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 
 ATTRIBUTES = []
 
 
 def fetch_data() -> [any, any]:
     """
-    Reads the data from the CSV files and returns them as Pandas DataFrames
+    Reads the data from the CSV file and returns it as a Pandas DataFrame
 
     Parameters:
     None
 
     Returns:
     df_train (pd.DataFrame): The raw training data DataFrame.
-    df_test (pd.DataFrame): The raw test data DataFrame.
     """
     df_train = pd.read_csv('../data/Train.csv')
-    df_test = pd.read_csv('../data/Test.csv')
 
-    return df_train, df_test
+    return df_train
 
 
 def prune_data(df) -> [pd.DataFrame, dict[str, dict[str, int]]]:
@@ -80,9 +79,9 @@ def normalize_data(df) -> pd.DataFrame:
     """
 
     scaler = MinMaxScaler()
-    df = scaler.fit_transform(df)
+    normalized_array = scaler.fit_transform(df)
 
-    return df
+    return pd.DataFrame(normalized_array, columns=df.columns, index=df.index)
 
 
 def visualize_data_distribution(df, category: {map}) -> None:
@@ -147,20 +146,20 @@ def visualize_data_distribution(df, category: {map}) -> None:
 
 def main():
     # Get dataset as dataframe and their corresponding category values
-    df = {}
-    df['train'], df['test'] = fetch_data()
+    df = fetch_data()
 
     # Prune dataset and store the category value mappings
-    category_values = {}
-    df['train'], category_values['train'] = prune_data(df['train'])
-    df['test'], category_values['test'] = prune_data(df['test'])
+    df, category_values = prune_data(df)
 
-    visualize_data_distribution(df['train'], category_values['train'])
+    visualize_data_distribution(df, category_values)
 
     # Normalize the datasets
-    df_norm = {}
-    df_norm['train'] = normalize_data(df['train'])
-    df_norm['test'] = normalize_data(df['test'])
+    df_norm = normalize_data(df)
+
+    # Define features and labels
+    X = df_norm.drop(columns=['Age (years)'])
+    y = df_norm['Age (years)']
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
 
 
 if __name__ == '__main__':
