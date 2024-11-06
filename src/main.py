@@ -80,9 +80,9 @@ def normalize_data(df) -> pd.DataFrame:
     """
 
     scaler = MinMaxScaler()
-    df = scaler.fit_transform(df)
+    normalized_array = scaler.fit_transform(df)
 
-    return df
+    return pd.DataFrame(normalized_array, columns=df.columns, index=df.index)
 
 
 def visualize_data_distribution(df, category: {map}) -> None:
