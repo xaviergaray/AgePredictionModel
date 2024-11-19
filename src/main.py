@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+from sklearn.linear_model import LinearRegression
 
 ATTRIBUTES = []
 
@@ -144,6 +148,47 @@ def visualize_data_distribution(df, category: {map}) -> None:
     plt.show()
 
 
+def KNN_model(X_train, X_test, y_train, y_test):
+    rmse_val = [] #to store rmse values for different k
+    for K in range(20):
+        K = K+1
+        model = KNeighborsRegressor(n_neighbors = K)
+        model.fit(X_train, y_train)  #fit the model
+        pred=model.predict(X_test) #make prediction on test set
+        error = sqrt(mean_squared_error(y_test,pred)) #calculate rmse
+        rmse_val.append(error) #store rmse values
+
+    #plotting the rmse values against k values
+    curve = pd.DataFrame(rmse_val) #elbow curve 
+    curve.plot()
+    plt.show()
+
+    #print the lowest rmse value and its K
+    rmse_val = np.array(rmse_val)
+    print(rmse_val.min())
+    print(rmse_val.argmin())
+    return model
+
+def LinearRegression_model(df_norm):
+
+    X = df_norm.drop(columns=['Age (years)'])
+    y = df_norm['Age (years)']
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    print("Linear Regression using all features:")
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    print(model.score(X_test, y_test))
+
+    print("Linear Regression using only 5 most correlated features:")
+    XCor5 = df_norm[['Systolic_BP', 'Diastolic_BP', 'Cholesterol Level (mg/dL)', 'Blood Glucose Level (mg/dL)', 'Hearing Ability (dB)']]
+    XCor5_train, XCor5_test, y_train, y_test = train_test_split(XCor5, y)
+    model = LinearRegression()
+    model.fit(XCor5_train, y_train)
+    print(model.score(XCor5_test, y_test))
+
+    return model
+
 def main():
     # Get dataset as dataframe and their corresponding category values
     df = fetch_data()
@@ -151,7 +196,7 @@ def main():
     # Prune dataset and store the category value mappings
     df, category_values = prune_data(df)
 
-    visualize_data_distribution(df, category_values)
+    #visualize_data_distribution(df, category_values)
 
     # Normalize the datasets
     df_norm = normalize_data(df)
@@ -160,6 +205,20 @@ def main():
     X = df_norm.drop(columns=['Age (years)'])
     y = df_norm['Age (years)']
     X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+
+    #Run two KNN models
+    print("Using all features:")
+    model = KNN_model(X_train, X_test, y_train, y_test)
+
+    print("Using only 5 most correlated features:")
+    XCor5 = df_norm[['Systolic_BP', 'Diastolic_BP', 'Cholesterol Level (mg/dL)', 'Blood Glucose Level (mg/dL)', 'Hearing Ability (dB)']]
+    XCor5_train, XCor5_test, y_train, y_test = train_test_split(XCor5, y)
+    model = KNN_model(XCor5_train, XCor5_test, y_train, y_test)
+
+    #Run two linear regression modles
+    model = LinearRegression_model(df_norm)
+
 
 
 if __name__ == '__main__':
