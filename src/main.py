@@ -1,10 +1,15 @@
 # Model used for age prediction using the Human Age Prediction Synthetic Dataset on Kaggle (link below)
 # Created as a project for course project at New Jersey Institute of Technology
 # Data link https://www.kaggle.com/datasets/abdullah0a/human-age-prediction-synthetic-dataset/data
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Suppress TensorFlow messages
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import tensorflow as tf
+from sklearn.inspection import permutation_importance
+from tensorflow.keras.layers import Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
@@ -26,7 +31,6 @@ def fetch_data() -> [any, any]:
     df_train (pd.DataFrame): The raw training data DataFrame.
     """
     df_train = pd.read_csv('../data/Train.csv')
-
     return df_train
 
 
@@ -189,14 +193,88 @@ def LinearRegression_model(df_norm):
 
     return model
 
-def main():
+def train_neural_network_model(X_train: pd.DataFrame, y_train: pd.DataFrame) -> tf.keras.Sequential:
+    """
+    Trains a sequential neural network.
+
+    Parameters:
+    X_train (pd.DataFrame): The training features DataFrame.
+    y_train (pd.DataFrame): The training labels DataFrame.
+
+    Returns:
+    model (tensorflow.keras.Sequential): The trained model.
+    """
+    model = tf.keras.Sequential([
+        Dense(64, activation='relu'),
+        Dropout(0.2),
+        Dense(32, activation='relu'),
+        Dense(1)
+    ])
+
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse', 'r2_score'])
+    model.fit(X_train, y_train, epochs=50, validation_split=0.2, batch_size=32, verbose=0)
+
+    return model
+
+
+def neural_network_tasks(X, X_train, y_train, X_test, y_test):
+    """
+    Performs all functions related to the neural network
+
+    Parameters:
+    X (pd.DataFrame): The all features DataFrame.
+    X_train (pd.DataFrame): The training features DataFrame.
+    y_train (pd.DataFrame): The training labels DataFrame.
+    X_test (pd.DataFrame): The testing features DataFrame.
+    y_test (pd.DataFrame): The testing labels DataFrame.
+
+    Returns:
+    None
+    """
+    # Train and test models
+    print("Training Neural Network...")
+    neural_network = train_neural_network_model(X_train, y_train)
+    print("Done!")
+    loss, mae, mse, r2 = neural_network.evaluate(X_test, y_test)
+    print(f"Mean Absolute Error on Test Data: {mae} | Mean Squared Error: {mse} | R-Squared: {r2}")
+
+    print("Feature importance by order:")
+    result, sorted_idx = get_feature_importances(neural_network, X_test, y_test)
+    for idx in sorted_idx:
+        print(f"{X.columns.to_list()[idx]}: {result.importances_mean[idx]:.4f}")
+
+
+def get_feature_importances(model, X_test, y_test):
+    """
+    Trains a sequential neural network.
+
+    Parameters:
+    model: Any trained model
+    X_test (pd.DataFrame): The test features
+    y_test (pd.DataFrame): The test labels
+
+    Returns:
+    result (Dictionary-like object): Result of the permutation_importance function
+    sorted_idx (List): The indexes of the features in order of importance
+    """
+    result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42,
+                                    scoring='neg_mean_squared_error')
+
+    sorted_idx = result.importances_mean.argsort()
+
+    return result, sorted_idx
+
+
+def main(visualize_data: bool):
     # Get dataset as dataframe and their corresponding category values
     df = fetch_data()
 
     # Prune dataset and store the category value mappings
     df, category_values = prune_data(df)
 
-    #visualize_data_distribution(df, category_values)
+    # Visualize raw data
+    if visualize_data:
+        visualize_data_distribution(df, category_values)
 
     # Normalize the datasets
     df_norm = normalize_data(df)
@@ -205,6 +283,9 @@ def main():
     X = df_norm.drop(columns=['Age (years)'])
     y = df_norm['Age (years)']
     X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    # Run Neural Network related tasks
+    neural_network_tasks(X, X_train, y_train, X_test, y_test)
 
 
     #Run two KNN models
@@ -222,4 +303,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(visualize_data=False)
