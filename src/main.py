@@ -269,6 +269,82 @@ def get_feature_importances(model, X_test, y_test):
 
     return result, sorted_idx
 
+def random_forest(X, X_train, y_train, X_test, y_test):
+
+    # Since there are numerous categorical features in our dataset we need to encode them numerically
+    # Which is done in the prune_data function
+    print("Begin Random Forest Grid Search")
+
+    # Tests different parameters for RandomForestRegressor to see which is best
+    param_grid = {
+        "n_estimators" : [80, 100, 150],
+        "criterion" : ["squared_error", "absolute_error", "poisson"],
+        "max_depth" : [3, 10, None],
+        "min_samples_split" : [2, 5, 10],
+        "random_state" : [42]
+    }
+
+    gs = GridSearchCV(estimator=RandomForestRegressor(),
+                  param_grid=param_grid,
+                  scoring="r2",
+                  refit=True,
+                  cv=3,
+                  n_jobs=-1)
+    
+    #rf = RandomForestRegressor(n_estimators=100, criterion= "squared_error",  n_jobs=-1, random_state=42)
+
+    gs.fit(X_train, y_train)
+
+    print("Random Forest Grid Search Finish")
+
+    predictions = gs.predict(X_test) 
+    print("Finished with parameters:", gs.best_params_)
+    print("R-Squared:", gs.best_score_, "MSE:", sqrt(mean_squared_error(y_test, predictions)))
+    print("\n")
+
+    # Takes the first tree [0]
+    rf = gs.best_estimator_
+    first_rf = rf.estimators_[0]
+
+    # Plot but only limit to depth of 4 including root
+    tree.plot_tree(first_rf, max_depth=3, feature_names = X_train.columns, filled = True, fontsize=8)
+    
+    #plt.savefig("first_rf.png", dpi=900)
+    plt.figure(figsize=(20, 12))
+    plt.tight_layout()
+    plt.show()
+    
+
+
+def svr(X, X_train, y_train, X_test, y_test):
+
+    print("Begin SVR Grid Search")
+
+    # Using param_grid we were able to test and narrow down to specific ranges of values for the given parameters 
+    param_grid = {
+        "kernel" : ["rbf", "poly"],
+        "gamma" : ["scale", "auto", 1, 5, .5],
+        "C" : [.8, .9, 1, 5],
+        "epsilon" : [.07, .08, .1, .3],
+    }
+
+    gs = GridSearchCV(estimator=SVR(),
+                  param_grid=param_grid,
+                  scoring="r2",
+                  refit=True,
+                  cv=5,
+                  n_jobs=-1)
+
+
+    gs.fit(X_train, y_train)
+
+    print("SVR Grid Search Finish")
+
+    predictions = gs.predict(X_test) 
+    print("Finished with parameters:", gs.best_params_)
+    print("R-Squared:", gs.best_score_, "MSE:", sqrt(mean_squared_error(y_test, predictions)))
+    print("\n")
+
 
 def main(visualize_data: bool):
     # Get dataset as dataframe and their corresponding category values
@@ -291,6 +367,12 @@ def main(visualize_data: bool):
 
     # Run Neural Network related tasks
     neural_network_tasks(X, X_train, y_train, X_test, y_test)
+
+    # Random Forest with Tree Output
+    random_forest(X, X_train, y_train, X_test, y_test)
+
+    # Suppot Vector Regression
+    svr(X, X_train, y_train, X_test, y_test)
 
 
     #Run two KNN models
